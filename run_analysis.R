@@ -1,41 +1,57 @@
+#Please pull ALL THE FILES present in the repository before running this code
+
 #Loading necessary R Packages
 library(dplyr)
 
-#Reading the test data
-x_test <- read.table("./UCI HAR Dataset/X_test.txt")
-y_test <- read.table("./UCI HAR Dataset/y_test.txt")
-sub_test <- read.table("./UCI HAR Dataset/subject_test.txt")
-
-#Reading the train data
-x_train <- read.table("./UCI HAR Dataset/X_train.txt")
-y_train <- read.table("./UCI HAR Dataset/y_train.txt")
-sub_train <- read.table("./UCI HAR Dataset/subject_train.txt")
+#Unzip the X test and train files
+unzip(zipfile = "./UCI HAR Dataset/X_test.zip", exdir = "./UCI HAR Dataset")
+unzip(zipfile = "./UCI HAR Dataset/X_train.zip", exdir = "./UCI HAR Dataset")
 
 #Reading the features and activity labels
-var_names <- read.table("./UCI HAR Dataset/features.txt")
-act_lab <- read.table("./UCI HAR Dataset/activity_labels.txt")
+features <- read.table("./UCI HAR Dataset/features.txt", col.names = c("Code", "Funcion"))
+activity_labels<- read.table("./UCI HAR Dataset/activity_labels.txt", col.names = c("ID", "Activity"))
+
+#Reading the test data
+x_test <- read.table("./UCI HAR Dataset/X_test.txt", col.names = features$Funcion)
+y_test <- read.table("./UCI HAR Dataset/y_test.txt", col.names = "ID")
+sub_test <- read.table("./UCI HAR Dataset/subject_test.txt", col.names = "Subject")
+
+#Reading the train data
+x_train <- read.table("./UCI HAR Dataset/X_train.txt", col.names = features$Funcion)
+y_train <- read.table("./UCI HAR Dataset/y_train.txt", col.names = "ID")
+sub_train <- read.table("./UCI HAR Dataset/subject_train.txt", col.names = "Subject")
+
+  
 
 #1: Merges the training and the test sets to create one data set
 x_total <- rbind(x_train, x_test)
 y_total <- rbind(y_train, y_test)
 sub_total <- rbind(sub_test, sub_train)
+mdata <- cbind(sub_total, x_total, y_total)
 
 #2: Extracts only the measurements on the mean and standard deviation for each measurement
-selected_var <- var_names[grep("mean\\(\\)|std\\(\\)", var_names[ , 2]), ] 
-x_total_mod <- x_total[ , selected_var[ , 1]]
+tdata <- mdata %>% select(Subject, ID, contains("mean"), contains("std"))
 
 #3: Uses descriptive activity names to name the activities in the data set
-y_total_mod <- left_join(y_total, act_lab, by = "V1")
-colnames(y_total_mod) <- c("Activity", "Description")
+tdata$id <- activity_labels[tdata$ID, 2]
 
 #4: Appropriately labels the data set with descriptive variable names
-colnames(x_total_mod) <- var_names[selected_var[ , 1], 2]
+names(tdata)[2] = "Activity"
+names(tdata)<-gsub("Acc", "Accelerometer", names(tdata))
+names(tdata)<-gsub("Gyro", "Gyroscope", names(tdata))
+names(tdata)<-gsub("BodyBody", "Body", names(tdata))
+names(tdata)<-gsub("Mag", "Magnitude", names(tdata))
+names(tdata)<-gsub("^t", "Time", names(tdata))
+names(tdata)<-gsub("^f", "Frequency", names(tdata))
+names(tdata)<-gsub("tBody", "TimeBody", names(tdata))
+names(tdata)<-gsub("-mean()", "Mean", names(tdata), ignore.case = TRUE)
+names(tdata)<-gsub("-std()", "STD", names(tdata), ignore.case = TRUE)
+names(tdata)<-gsub("-freq()", "Frequency", names(tdata), ignore.case = TRUE)
+names(tdata)<-gsub("angle", "Angle", names(tdata))
+names(tdata)<-gsub("gravity", "Gravity", names(tdata))
 
 #5: From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject
-sub_total_mod <- left_join(sub_total, act_lab, by = "V1")
-colnames(sub_total_mod) <- c("Activity", "Description")
-total <- cbind(x_total_mod, sub_total_mod)
-total_mean <- total %>% group_by(Description) %>% summarise_each(funs(mean))
+tidydata <- tdata %>% group_by(Subject, Activity) %>% summarise_all(funs(mean)) %>% sort(Subject, Activity)
 
 #Output Table
-write.table(total_mean, file = "./UCI HAR Dataset/tidydata.txt", row.names = FALSE, col.names = TRUE)
+write.table(tidydata, file = "./UCI HAR Dataset/tidydata.txt", row.names = FALSE, col.names = TRUE)
