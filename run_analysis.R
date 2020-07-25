@@ -1,6 +1,7 @@
 #Please pull ALL THE FILES present in the repository before running this code
 
-#Loading necessary R Packages
+#Installing and loading necessary R Packages
+install.packages("dplyr")
 library(dplyr)
 
 #Unzip the X test and train files
