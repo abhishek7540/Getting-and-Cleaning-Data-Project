@@ -96,3 +96,4 @@ tBodyGyroMean
 tBodyGyroJerkMean
 
 
+
